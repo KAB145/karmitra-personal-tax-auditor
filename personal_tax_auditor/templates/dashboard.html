@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – KarMitra{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+    <div>
+      <div class="page-title" id="welcomeMsg">Welcome back</div>
+      <div class="page-sub">Your tax snapshot for <span id="yearLabel">{{ '' }}</span></div>
+    </div>
+    <div class="year-selector">
+      <i class="fa-regular fa-calendar text-amber" style="font-size:0.8rem;"></i>
+      <select id="yearSelect" onchange="loadDashboard()"></select>
+    </div>
+  </div>
+</div>
+
+<!-- KPI row -->
+<div class="kpi-grid" id="kpiGrid">
+  <div class="kpi-card">
+    <div class="kpi-label"><i class="fa-solid fa-briefcase"></i>Annual Salary</div>
+    <div class="kpi-value mono" id="kpiSalary">—</div>
+    <div class="kpi-sub">Gross income</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="kpi-label"><i class="fa-solid fa-bag-shopping"></i>Total Spent</div>
+    <div class="kpi-value mono" id="kpiSpent">—</div>
+    <div class="kpi-sub" id="kpiSpentSub">Transactions: —</div>
+  </div>
+  <div class="kpi-card blue">
+    <div class="kpi-label"><i class="fa-solid fa-percent"></i>VAT Paid</div>
+    <div class="kpi-value mono" id="kpiVAT">—</div>
+    <div class="kpi-sub">13% hidden in purchases</div>
+  </div>
+  <div class="kpi-card red">
+    <div class="kpi-label"><i class="fa-solid fa-file-invoice-dollar"></i>Income Tax</div>
+    <div class="kpi-value mono" id="kpiIncomeTax">—</div>
+    <div class="kpi-sub">Salary deduction</div>
+  </div>
+  <div class="kpi-card purple">
+    <div class="kpi-label"><i class="fa-solid fa-scale-balanced"></i>Effective Rate</div>
+    <div class="kpi-value mono" id="kpiEffRate">—</div>
+    <div class="kpi-sub">Real tax burden</div>
+  </div>
+</div>
+
+<!-- Charts row -->
+<div class="two-col">
+  <div class="panel">
+    <div class="panel-title">Monthly Spending & VAT <span class="badge-tag">Bar</span></div>
+    <canvas id="monthlyChart" height="200"></canvas>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Spending by Category <span class="badge-tag">Donut</span></div>
+    <canvas id="categoryChart" height="200"></canvas>
+  </div>
+</div>
+
+<!-- Tax burden breakdown + slab table -->
+<div class="two-col">
+  <div class="panel">
+    <div class="panel-title">Tax Burden Breakdown</div>
+    <div id="burdenBreakdown">
+      <div style="text-align:center; color:var(--muted); padding:2rem;">Loading…</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Income Tax Slab Detail</div>
+    <div id="slabDetail">
+      <div style="text-align:center; color:var(--muted); padding:2rem;">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent expenses -->
+<div class="panel">
+  <div class="panel-title">Recent Expenses <a href="/expenses" style="font-size:0.75rem; color:var(--amber); text-decoration:none;">View all →</a></div>
+  <table class="data-table" id="recentTable">
+    <thead>
+      <tr>
+        <th>Date</th><th>Vendor</th><th>Category</th>
+        <th>Amount</th><th>VAT</th><th>Base Price</th>
+      </tr>
+    </thead>
+    <tbody id="recentBody"></tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let monthlyChart = null, categoryChart = null;
+
+// populate year selector
+(function() {
+  const sel = document.getElementById('yearSelect');
+  const yr = currentYear();
+  for (let y = yr; y >= yr - 4; y--) {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    sel.appendChild(o);
+  }
+  document.getElementById('yearLabel').textContent = yr;
+})();
+
+async function loadDashboard() {
+  const year = document.getElementById('yearSelect').value;
+  document.getElementById('yearLabel').textContent = year;
+  try {
+    const d = await api(`/get-dashboard?year=${year}`);
+
+    document.getElementById('welcomeMsg').textContent = `Welcome back, ${d.user.name.split(' ')[0]}`;
+    document.getElementById('kpiSalary').textContent = fmtNPR(d.user.salary);
+    document.getElementById('kpiSpent').textContent = fmtNPR(d.expenses_summary.total_spent);
+    document.getElementById('kpiSpentSub').textContent = `Transactions: ${d.expenses_summary.transaction_count}`;
+    document.getElementById('kpiVAT').textContent = fmtNPR(d.expenses_summary.total_vat_paid);
+    document.getElementById('kpiIncomeTax').textContent = fmtNPR(d.income_tax.total_income_tax);
+    document.getElementById('kpiEffRate').textContent = `${d.tax_burden.effective_rate_pct}%`;
+
+    renderMonthlyChart(d.charts.monthly);
+    renderCategoryChart(d.charts.categories);
+    renderBurden(d.tax_burden);
+    renderSlabs(d.income_tax.slab_details);
+    loadRecent(year);
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+function renderMonthlyChart(monthly) {
+  const ctx = document.getElementById('monthlyChart').getContext('2d');
+  if (monthlyChart) monthlyChart.destroy();
+  monthlyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: monthly.map(m => m.month),
+      datasets: [
+        { label: 'Total Spent', data: monthly.map(m => m.spent), backgroundColor: 'rgba(245,158,11,0.7)', borderRadius: 4 },
+        { label: 'VAT Paid', data: monthly.map(m => m.vat), backgroundColor: 'rgba(220,38,38,0.5)', borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { position: 'bottom' } },
+      scales: { y: { ticks: { callback: v => 'NPR ' + fmt(v) } } }
+    }
+  });
+}
+
+function renderCategoryChart(cats) {
+  const ctx = document.getElementById('categoryChart').getContext('2d');
+  if (categoryChart) categoryChart.destroy();
+  if (!cats.length) return;
+  const colors = ['#f59e0b','#3b82f6','#10b981','#8b5cf6','#dc2626','#ec4899','#14b8a6','#f97316','#84cc16','#06b6d4'];
+  categoryChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: cats.map(c => c.category),
+      datasets: [{ data: cats.map(c => c.total), backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { position: 'right' },
+        tooltip: { callbacks: { label: ctx => `${ctx.label}: NPR ${fmt(ctx.raw)}` } }
+      },
+      cutout: '60%'
+    }
+  });
+}
+
+function renderBurden(t) {
+  const total = t.income_tax + t.vat_paid;
+  const incPct = total > 0 ? Math.round(t.income_tax / total * 100) : 0;
+  const vatPct = 100 - incPct;
+  document.getElementById('burdenBreakdown').innerHTML = `
+    <div style="margin-bottom:1.5rem;">
+      <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.4rem;">
+        <span>Income Tax</span><span class="mono text-amber">${fmtNPR(t.income_tax)}</span>
+      </div>
+      <div style="height:8px; background:var(--dark2); border-radius:4px; overflow:hidden;">
+        <div style="height:100%; width:${incPct}%; background:var(--amber); border-radius:4px;"></div>
+      </div>
+    </div>
+    <div style="margin-bottom:1.5rem;">
+      <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.4rem;">
+        <span>VAT via Purchases</span><span class="mono text-red">${fmtNPR(t.vat_paid)}</span>
+      </div>
+      <div style="height:8px; background:var(--dark2); border-radius:4px; overflow:hidden;">
+        <div style="height:100%; width:${vatPct}%; background:var(--crimson, #dc2626); border-radius:4px;"></div>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border); padding-top:1rem;">
+      <div style="display:flex; justify-content:space-between;">
+        <span style="font-weight:600;">Total Tax Burden</span>
+        <span class="mono text-amber" style="font-size:1.1rem; font-weight:700;">${fmtNPR(t.total)}</span>
+      </div>
+      <div style="font-size:0.75rem; color:var(--muted); margin-top:0.25rem;">Effective rate: ${t.effective_rate_pct}% of salary</div>
+    </div>
+  `;
+}
+
+function renderSlabs(slabs) {
+  if (!slabs || !slabs.length) { document.getElementById('slabDetail').innerHTML = '<div class="empty-state"><i class="fa-solid fa-info-circle"></i><p>Add your salary in profile.</p></div>'; return; }
+  document.getElementById('slabDetail').innerHTML = slabs.map(s => `
+    <div class="slab-row">
+      <div class="slab-label">${s.label}</div>
+      <div class="slab-rate">${s.rate_pct}</div>
+      <div class="slab-tax text-amber">${fmtNPR(s.tax)}</div>
+    </div>
+  `).join('');
+}
+
+async function loadRecent(year) {
+  const expenses = await api(`/expenses?year=${year}`);
+  const tbody = document.getElementById('recentBody');
+  const recent = expenses.slice(0, 8);
+  if (!recent.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fa-solid fa-receipt"></i><p>No expenses recorded yet. <a href="/expenses" style="color:var(--amber)">Add your first →</a></p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = recent.map(e => `
+    <tr>
+      <td class="text-muted">${e.date}</td>
+      <td>${e.vendor}</td>
+      <td><span class="cat-badge">${e.category}</span></td>
+      <td class="mono">${fmtNPR(e.amount)}</td>
+      <td class="mono text-red">${fmtNPR(e.vat_amount)}</td>
+      <td class="mono text-green">${fmtNPR(e.actual_price)}</td>
+    </tr>
+  `).join('');
+}
+
+loadDashboard();
+</script>
+{% endblock %}

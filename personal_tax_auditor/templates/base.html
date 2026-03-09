@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}KarMitra – Nepal Tax Auditor{% endblock %}</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- Sidebar Navigation -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <path d="M14 2L26 8v12l-12 6L2 20V8L14 2z" fill="url(#grad)" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+        <path d="M14 2v24M2 8l12 6 12-6" stroke="rgba(255,255,255,0.4)" stroke-width="0.8"/>
+        <defs>
+          <linearGradient id="grad" x1="2" y1="2" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#f59e0b"/>
+            <stop offset="100%" stop-color="#d97706"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">KarMitra</div>
+      <div class="brand-sub">Nepal Tax Auditor</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="/dashboard" class="nav-item {% if request.path == '/dashboard' %}active{% endif %}">
+      <i class="fa-solid fa-gauge-high"></i>
+      <span>Dashboard</span>
+    </a>
+    <a href="/expenses" class="nav-item {% if request.path == '/expenses' %}active{% endif %}">
+      <i class="fa-solid fa-receipt"></i>
+      <span>Expenses</span>
+    </a>
+    <a href="/invoices" class="nav-item {% if request.path == '/invoices' %}active{% endif %}">
+      <i class="fa-solid fa-file-invoice"></i>
+      <span>Invoices</span>
+    </a>
+    <a href="/report" class="nav-item {% if request.path == '/report' %}active{% endif %}">
+      <i class="fa-solid fa-chart-pie"></i>
+      <span>Tax Report</span>
+    </a>
+    <a href="/profile" class="nav-item {% if request.path == '/profile' %}active{% endif %}">
+      <i class="fa-solid fa-user-gear"></i>
+      <span>Profile</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-chip" id="sidebarUser">
+      <div class="user-avatar" id="sidebarAvatar">–</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarName">Loading…</div>
+        <div class="user-role">Personal Account</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">
+      <i class="fa-solid fa-right-from-bracket"></i>
+    </button>
+  </div>
+</div>
+
+<!-- Mobile top bar -->
+<div class="mobile-topbar d-lg-none">
+  <button class="mobile-menu-btn" onclick="toggleSidebar()">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+  <div class="mobile-brand">KarMitra</div>
+</div>
+
+<!-- Main content -->
+<main class="main-content" id="mainContent">
+  {% block content %}{% endblock %}
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/static/js/app.js"></script>
+{% block extra_js %}{% endblock %}
+
+<script>
+  // Load session info
+  fetch('/api/session').then(r => r.json()).then(d => {
+    if (!d.logged_in) { window.location = '/login'; return; }
+    const initials = d.user.name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0,2);
+    document.getElementById('sidebarAvatar').textContent = initials;
+    document.getElementById('sidebarName').textContent = d.user.name;
+  });
+
+  function logout() {
+    fetch('/api/logout', {method:'POST'}).then(() => window.location = '/login');
+  }
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+  }
+</script>
+</body>
+</html>

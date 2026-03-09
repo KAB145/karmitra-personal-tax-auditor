@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}Expenses – KarMitra{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+    <div>
+      <div class="page-title">Expenses</div>
+      <div class="page-sub">Track daily purchases — VAT extracted automatically</div>
+    </div>
+    <button class="btn-primary" onclick="openModal()">
+      <i class="fa-solid fa-plus"></i> Add Expense
+    </button>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="panel" style="padding:1rem 1.5rem;">
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:center;">
+    <div style="flex:0 0 auto;">
+      <label class="form-label" style="display:inline; margin-right:0.5rem;">Year</label>
+      <select class="form-input" id="filterYear" style="width:auto; padding:0.4rem 0.7rem;" onchange="loadExpenses()">
+      </select>
+    </div>
+    <div style="flex:0 0 auto;">
+      <label class="form-label" style="display:inline; margin-right:0.5rem;">Month</label>
+      <select class="form-input" id="filterMonth" style="width:auto; padding:0.4rem 0.7rem;" onchange="loadExpenses()">
+        <option value="">All</option>
+        <option value="1">January</option><option value="2">February</option>
+        <option value="3">March</option><option value="4">April</option>
+        <option value="5">May</option><option value="6">June</option>
+        <option value="7">July</option><option value="8">August</option>
+        <option value="9">September</option><option value="10">October</option>
+        <option value="11">November</option><option value="12">December</option>
+      </select>
+    </div>
+    <div style="flex:1; min-width:200px;">
+      <input class="form-input" id="searchInput" placeholder="Search vendor or item…" style="padding:0.4rem 0.7rem;" oninput="filterTable()">
+    </div>
+    <div class="kpi-card" style="flex:0 0 auto; padding:0.65rem 1rem; margin:0;">
+      <div class="kpi-label" style="margin-bottom:0.15rem;"><i class="fa-solid fa-percent"></i> Total VAT</div>
+      <div class="kpi-value mono" id="summaryVAT" style="font-size:1rem;">—</div>
+    </div>
+    <div class="kpi-card green" style="flex:0 0 auto; padding:0.65rem 1rem; margin:0;">
+      <div class="kpi-label" style="margin-bottom:0.15rem;"><i class="fa-solid fa-coins"></i> Total Spent</div>
+      <div class="kpi-value mono" id="summarySpent" style="font-size:1rem;">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- Expense table -->
+<div class="panel">
+  <table class="data-table" id="expenseTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Vendor</th>
+        <th>Item</th>
+        <th>Category</th>
+        <th>Amount Paid</th>
+        <th>VAT</th>
+        <th>Base Price</th>
+        <th>Notes</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="expenseBody">
+      <tr><td colspan="9"><div class="empty-state"><div class="spinner" style="margin:0 auto;"></div></div></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Add Expense Modal -->
+<div id="expenseModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:500; align-items:center; justify-content:center;">
+  <div style="background:var(--dark3); border:1px solid var(--border); border-radius:14px; padding:2rem; width:100%; max-width:520px; max-height:90vh; overflow-y:auto;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+      <div style="font-size:1rem; font-weight:600;">Add Expense</div>
+      <button onclick="closeModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;">✕</button>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+      <div class="form-group">
+        <label class="form-label">Date *</label>
+        <input type="date" class="form-input" id="expDate">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category *</label>
+        <select class="form-input" id="expCategory"></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Vendor / Shop *</label>
+      <input type="text" class="form-input" id="expVendor" placeholder="Bhat-Bhateni, Laxmi Grocery…">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Item / Service</label>
+      <input type="text" class="form-input" id="expItem" placeholder="Rice, Electricity bill…">
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+      <div class="form-group">
+        <label class="form-label">Amount Paid (NPR) *</label>
+        <input type="number" class="form-input" id="expAmount" placeholder="0" oninput="previewVAT()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">VAT Included?</label>
+        <select class="form-input" id="expVATIncluded" onchange="previewVAT()">
+          <option value="1">Yes – 13% inside price</option>
+          <option value="0">No – price excludes VAT</option>
+        </select>
+      </div>
+    </div>
+    <!-- VAT preview -->
+    <div id="vatPreview" style="background:var(--dark2); border:1px solid var(--border); border-radius:8px; padding:0.85rem; margin-bottom:1rem; font-size:0.8rem; display:none;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;">
+        <span class="text-muted">VAT Amount (13%)</span>
+        <span class="mono text-red" id="previewVATAmt">—</span>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <span class="text-muted">Actual Price</span>
+        <span class="mono text-green" id="previewBase">—</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <input type="text" class="form-input" id="expNotes" placeholder="Optional notes…">
+    </div>
+    <div style="display:flex; gap:0.75rem;">
+      <button class="btn-primary" style="flex:1;" onclick="submitExpense()">Save Expense</button>
+      <button class="btn-outline" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allExpenses = [];
+
+// Init
+(function() {
+  const sel = document.getElementById('filterYear');
+  const yr = currentYear();
+  for (let y = yr; y >= yr - 4; y--) {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y; sel.appendChild(o);
+  }
+  document.getElementById('filterMonth').value = currentMonth();
+  document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
+  loadCategories();
+  loadExpenses();
+})();
+
+async function loadCategories() {
+  const cats = await api('/categories');
+  const sel = document.getElementById('expCategory');
+  sel.innerHTML = cats.map(c => `<option>${c}</option>`).join('');
+}
+
+async function loadExpenses() {
+  const yr = document.getElementById('filterYear').value;
+  const mo = document.getElementById('filterMonth').value;
+  let url = `/expenses?year=${yr}`;
+  if (mo) url += `&month=${mo}`;
+  try {
+    allExpenses = await api(url);
+    renderTable(allExpenses);
+    updateSummary(allExpenses);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById('expenseBody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fa-solid fa-receipt"></i><p>No expenses found. <a href="#" onclick="openModal()" style="color:var(--amber);">Add one →</a></p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(e => `
+    <tr data-vendor="${e.vendor.toLowerCase()}" data-item="${(e.item||'').toLowerCase()}">
+      <td class="text-muted mono" style="font-size:0.78rem;">${e.date}</td>
+      <td style="font-weight:500;">${e.vendor}</td>
+      <td class="text-muted">${e.item || '—'}</td>
+      <td><span class="cat-badge">${e.category}</span></td>
+      <td class="mono">${fmtNPR(e.amount)}</td>
+      <td class="mono text-red">${e.vat_included ? fmtNPR(e.vat_amount) : '—'}</td>
+      <td class="mono text-green">${fmtNPR(e.actual_price)}</td>
+      <td class="text-muted" style="font-size:0.78rem;">${e.notes || '—'}</td>
+      <td><button class="btn-danger" onclick="deleteExp(${e.id})"><i class="fa-solid fa-trash"></i></button></td>
+    </tr>
+  `).join('');
+}
+
+function updateSummary(rows) {
+  const totalSpent = rows.reduce((s,e) => s + e.amount, 0);
+  const totalVAT = rows.reduce((s,e) => s + e.vat_amount, 0);
+  document.getElementById('summarySpent').textContent = fmtNPR(totalSpent);
+  document.getElementById('summaryVAT').textContent = fmtNPR(totalVAT);
+}
+
+function filterTable() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = allExpenses.filter(e =>
+    e.vendor.toLowerCase().includes(q) || (e.item||'').toLowerCase().includes(q)
+  );
+  renderTable(filtered);
+  updateSummary(filtered);
+}
+
+async function deleteExp(id) {
+  if (!confirm('Delete this expense?')) return;
+  try {
+    await api(`/expenses/${id}`, 'DELETE');
+    toast('Expense deleted');
+    loadExpenses();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function openModal() { document.getElementById('expenseModal').style.display = 'flex'; }
+function closeModal() { document.getElementById('expenseModal').style.display = 'none'; }
+
+function previewVAT() {
+  const amount = parseFloat(document.getElementById('expAmount').value) || 0;
+  const included = document.getElementById('expVATIncluded').value === '1';
+  const preview = document.getElementById('vatPreview');
+  if (amount > 0 && included) {
+    const { vat, base } = extractVAT(amount);
+    document.getElementById('previewVATAmt').textContent = `NPR ${fmt(vat, 2)}`;
+    document.getElementById('previewBase').textContent = `NPR ${fmt(base, 2)}`;
+    preview.style.display = 'block';
+  } else { preview.style.display = 'none'; }
+}
+
+async function submitExpense() {
+  const data = {
+    date: document.getElementById('expDate').value,
+    vendor: document.getElementById('expVendor').value,
+    item: document.getElementById('expItem').value,
+    category: document.getElementById('expCategory').value,
+    amount: parseFloat(document.getElementById('expAmount').value),
+    vat_included: parseInt(document.getElementById('expVATIncluded').value),
+    notes: document.getElementById('expNotes').value,
+  };
+  if (!data.vendor || !data.amount) { toast('Vendor and amount are required', 'error'); return; }
+  try {
+    await api('/add-expense', 'POST', data);
+    toast('Expense added ✓');
+    closeModal();
+    loadExpenses();
+    // reset form
+    document.getElementById('expVendor').value = '';
+    document.getElementById('expItem').value = '';
+    document.getElementById('expAmount').value = '';
+    document.getElementById('expNotes').value = '';
+    document.getElementById('vatPreview').style.display = 'none';
+  } catch(e) { toast(e.message, 'error'); }
+}
+</script>
+{% endblock %}

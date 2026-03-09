@@ -1,0 +1,376 @@
+<!--{% extends "base.html" %}
+{% block title %}Profile – KarMitra{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">Profile Settings</div>
+  <div class="page-sub">Manage your personal and tax details</div>
+</div>
+
+<div class="two-col">
+  <!-- Profile form -->
+  
+  <!--<div class="panel">
+    <div class="panel-title">Personal Details</div>
+    <div class="form-group">
+      <label class="form-label">Full Name</label>
+      <input type="text" class="form-input" id="profName">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-input" id="profEmail" disabled style="opacity:0.5;">
+    </div>
+    <div class="form-group">
+      <label class="form-label">PAN Number</label>
+      <input type="text" class="form-input" id="profPAN" placeholder="9-digit PAN" maxlength="9">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Annual Salary (NPR)</label>
+      <input type="number" class="form-input" id="profSalary" placeholder="e.g. 600000" oninput="previewTax()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Employer</label>
+      <input type="text" class="form-input" id="profEmployer" placeholder="Company name">
+    </div>
+    <button class="btn-primary" onclick="saveProfile()">
+      <i class="fa-solid fa-floppy-disk"></i> Save Changes
+    </button>
+  </div>
+
+  <!-- Tax preview -->
+  <!--<div>
+    <div class="panel">
+      <div class="panel-title">Income Tax Preview</div>
+      <div id="taxPreviewPanel">
+        <div class="empty-state"><i class="fa-solid fa-calculator"></i><p>Enter your salary to see tax estimate</p></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">VAT Quick Calculator</div>
+      <div class="form-group">
+        <label class="form-label">Amount Paid (NPR)</label>
+        <input type="number" class="form-input" id="calcAmount" placeholder="1000" oninput="calcVAT()">
+      </div>
+      <div id="calcResult" style="display:none; background:var(--dark2); border-radius:8px; padding:1rem; font-size:0.875rem;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+          <span class="text-muted">VAT Amount (13%)</span>
+          <span class="mono text-red" id="calcVATAmt">—</span>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span class="text-muted">Actual Price</span>
+          <span class="mono text-green" id="calcBaseAmt">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadProfile() {
+  try {
+    const d = await api('/profile');
+    document.getElementById('profName').value = d.name || '';
+    document.getElementById('profEmail').value = d.email || '';
+    document.getElementById('profPAN').value = d.pan_number || '';
+    document.getElementById('profSalary').value = d.salary || '';
+    document.getElementById('profEmployer').value = d.employer || '';
+    if (d.salary) previewTax();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function saveProfile() {
+  try {
+    await api('/profile', 'PUT', {
+      name: document.getElementById('profName').value,
+      pan_number: document.getElementById('profPAN').value,
+      salary: parseFloat(document.getElementById('profSalary').value) || 0,
+      employer: document.getElementById('profEmployer').value,
+    });
+    toast('Profile saved ✓');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function previewTax() {
+  const salary = parseFloat(document.getElementById('profSalary').value) || 0;
+  if (!salary) { document.getElementById('taxPreviewPanel').innerHTML = '<div class="empty-state"><i class="fa-solid fa-calculator"></i><p>Enter your salary</p></div>'; return; }
+  try {
+    const res = await fetch('/api/vat-calculator', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ amount: salary })
+    });
+    // Use local calculation for income tax preview
+    const slabs = [
+      { min: 0, max: 500000, rate: 0.01, label: 'Up to 5 Lakh' },
+      { min: 500001, max: 700000, rate: 0.10, label: '5L – 7L' },
+      { min: 700001, max: 1000000, rate: 0.20, label: '7L – 10L' },
+      { min: 1000001, max: null, rate: 0.30, label: 'Above 10L' },
+    ];
+    let tax = 0, rem = salary, details = [];
+    for (const s of slabs) {
+      if (rem <= 0) break;
+      const size = s.max ? s.max - s.min : rem;
+      const taxable = Math.min(rem, size);
+      const t = taxable * s.rate;
+      tax += t; rem -= taxable;
+      if (taxable > 0) details.push({ ...s, taxable, t });
+    }
+    const effRate = salary > 0 ? (tax / salary * 100).toFixed(1) : 0;
+
+    document.getElementById('taxPreviewPanel').innerHTML = `
+      ${details.map(d => `
+        <div class="slab-row">
+          <div class="slab-label">${d.label}</div>
+          <div class="slab-rate">${(d.rate*100).toFixed(0)}%</div>
+          <div class="slab-tax text-amber">${fmtNPR(d.t)}</div>
+        </div>
+      `).join('')}
+      <div style="border-top:1px solid var(--border); padding-top:0.85rem; margin-top:0.85rem; display:flex; justify-content:space-between;">
+        <span style="font-weight:600;">Annual Tax</span>
+        <span class="mono text-amber" style="font-size:1rem; font-weight:700;">${fmtNPR(tax)}</span>
+      </div>
+      <div style="font-size:0.72rem; color:var(--muted); text-align:right;">Monthly: ${fmtNPR(tax/12)} &nbsp;|&nbsp; Rate: ${effRate}%</div>
+    `;
+  } catch(e) {}
+}
+
+function calcVAT() {
+  const amount = parseFloat(document.getElementById('calcAmount').value) || 0;
+  const res = document.getElementById('calcResult');
+  if (amount > 0) {
+    const { vat, base } = extractVAT(amount);
+    document.getElementById('calcVATAmt').textContent = `NPR ${fmt(vat, 2)}`;
+    document.getElementById('calcBaseAmt').textContent = `NPR ${fmt(base, 2)}`;
+    res.style.display = 'block';
+  } else { res.style.display = 'none'; }
+}
+
+loadProfile();
+</script>
+{% endblock %}
+-->
+
+{% extends "base.html" %}
+{% block title %}Profile – KarMitra{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">Profile Settings</div>
+  <div class="page-sub">Manage your personal and tax details</div>
+</div>
+
+<div class="two-col">
+  <!-- Profile form -->
+  <div class="panel">
+    <div class="panel-title">Personal Details</div>
+    <div class="form-group">
+      <label class="form-label">Full Name</label>
+      <input type="text" class="form-input" id="profName">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-input" id="profEmail" disabled style="opacity:0.5;">
+    </div>
+    <div class="form-group">
+      <label class="form-label">PAN Number</label>
+      <input type="text" class="form-input" id="profPAN" placeholder="9-digit PAN" maxlength="9">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Annual Salary (NPR)</label>
+      <input type="number" class="form-input" id="profSalary" placeholder="e.g. 600000" oninput="previewTax()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Employer</label>
+      <input type="text" class="form-input" id="profEmployer" placeholder="Company name">
+    </div>
+    <button class="btn-primary" onclick="saveProfile()">
+      <i class="fa-solid fa-floppy-disk"></i> Save Changes
+    </button>
+
+    <!-- Danger Zone -->
+    <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid rgba(220,38,38,0.2);">
+      <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:#dc2626; margin-bottom:0.75rem; font-weight:600;">
+        <i class="fa-solid fa-triangle-exclamation"></i> Danger Zone
+      </div>
+      <div style="background:rgba(220,38,38,0.06); border:1px solid rgba(220,38,38,0.2); border-radius:10px; padding:1rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+        <div>
+          <div style="font-size:0.85rem; font-weight:600; margin-bottom:0.2rem;">Delete Account</div>
+          <div style="font-size:0.75rem; color:var(--muted);">Permanently removes your account, all expenses, and invoices.</div>
+        </div>
+        <button onclick="showDeleteConfirm()" style="background:rgba(220,38,38,0.15); color:#fca5a5; border:1px solid rgba(220,38,38,0.3); border-radius:7px; padding:0.5rem 1rem; font-family:'Sora',sans-serif; font-size:0.82rem; font-weight:600; cursor:pointer; white-space:nowrap; transition:all 0.2s;" onmouseover="this.style.background='rgba(220,38,38,0.3)'" onmouseout="this.style.background='rgba(220,38,38,0.15)'">
+          <i class="fa-solid fa-trash"></i> Delete Account
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tax preview -->
+  <div>
+    <div class="panel">
+      <div class="panel-title">Income Tax Preview</div>
+      <div id="taxPreviewPanel">
+        <div class="empty-state"><i class="fa-solid fa-calculator"></i><p>Enter your salary to see tax estimate</p></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">VAT Quick Calculator</div>
+      <div class="form-group">
+        <label class="form-label">Amount Paid (NPR)</label>
+        <input type="number" class="form-input" id="calcAmount" placeholder="1000" oninput="calcVAT()">
+      </div>
+      <div id="calcResult" style="display:none; background:var(--dark2); border-radius:8px; padding:1rem; font-size:0.875rem;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+          <span class="text-muted">VAT Amount (13%)</span>
+          <span class="mono text-red" id="calcVATAmt">—</span>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span class="text-muted">Actual Price</span>
+          <span class="mono text-green" id="calcBaseAmt">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadProfile() {
+  try {
+    const d = await api('/profile');
+    document.getElementById('profName').value = d.name || '';
+    document.getElementById('profEmail').value = d.email || '';
+    document.getElementById('profPAN').value = d.pan_number || '';
+    document.getElementById('profSalary').value = d.salary || '';
+    document.getElementById('profEmployer').value = d.employer || '';
+    if (d.salary) previewTax();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function saveProfile() {
+  try {
+    await api('/profile', 'PUT', {
+      name: document.getElementById('profName').value,
+      pan_number: document.getElementById('profPAN').value,
+      salary: parseFloat(document.getElementById('profSalary').value) || 0,
+      employer: document.getElementById('profEmployer').value,
+    });
+    toast('Profile saved ✓');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function previewTax() {
+  const salary = parseFloat(document.getElementById('profSalary').value) || 0;
+  if (!salary) { document.getElementById('taxPreviewPanel').innerHTML = '<div class="empty-state"><i class="fa-solid fa-calculator"></i><p>Enter your salary</p></div>'; return; }
+  try {
+    const res = await fetch('/api/vat-calculator', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ amount: salary })
+    });
+    // Use local calculation for income tax preview
+    const slabs = [
+      { min: 0, max: 500000, rate: 0.01, label: 'Up to 5 Lakh' },
+      { min: 500001, max: 700000, rate: 0.10, label: '5L – 7L' },
+      { min: 700001, max: 1000000, rate: 0.20, label: '7L – 10L' },
+      { min: 1000001, max: null, rate: 0.30, label: 'Above 10L' },
+    ];
+    let tax = 0, rem = salary, details = [];
+    for (const s of slabs) {
+      if (rem <= 0) break;
+      const size = s.max ? s.max - s.min : rem;
+      const taxable = Math.min(rem, size);
+      const t = taxable * s.rate;
+      tax += t; rem -= taxable;
+      if (taxable > 0) details.push({ ...s, taxable, t });
+    }
+    const effRate = salary > 0 ? (tax / salary * 100).toFixed(1) : 0;
+
+    document.getElementById('taxPreviewPanel').innerHTML = `
+      ${details.map(d => `
+        <div class="slab-row">
+          <div class="slab-label">${d.label}</div>
+          <div class="slab-rate">${(d.rate*100).toFixed(0)}%</div>
+          <div class="slab-tax text-amber">${fmtNPR(d.t)}</div>
+        </div>
+      `).join('')}
+      <div style="border-top:1px solid var(--border); padding-top:0.85rem; margin-top:0.85rem; display:flex; justify-content:space-between;">
+        <span style="font-weight:600;">Annual Tax</span>
+        <span class="mono text-amber" style="font-size:1rem; font-weight:700;">${fmtNPR(tax)}</span>
+      </div>
+      <div style="font-size:0.72rem; color:var(--muted); text-align:right;">Monthly: ${fmtNPR(tax/12)} &nbsp;|&nbsp; Rate: ${effRate}%</div>
+    `;
+  } catch(e) {}
+}
+
+function calcVAT() {
+  const amount = parseFloat(document.getElementById('calcAmount').value) || 0;
+  const res = document.getElementById('calcResult');
+  if (amount > 0) {
+    const { vat, base } = extractVAT(amount);
+    document.getElementById('calcVATAmt').textContent = `NPR ${fmt(vat, 2)}`;
+    document.getElementById('calcBaseAmt').textContent = `NPR ${fmt(base, 2)}`;
+    res.style.display = 'block';
+  } else { res.style.display = 'none'; }
+}
+
+loadProfile();
+
+function showDeleteConfirm() {
+  document.getElementById('deleteModal').style.display = 'flex';
+  document.getElementById('deleteConfirmInput').value = '';
+  document.getElementById('confirmDeleteBtn').disabled = true;
+}
+
+function hideDeleteConfirm() {
+  document.getElementById('deleteModal').style.display = 'none';
+}
+
+function checkConfirmInput() {
+  const val = document.getElementById('deleteConfirmInput').value;
+  document.getElementById('confirmDeleteBtn').disabled = (val !== 'DELETE');
+}
+
+async function deleteAccount() {
+  try {
+    const res = await fetch('/api/delete-account', { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok) {
+      window.location = '/login';
+    } else {
+      toast(data.error || 'Failed to delete account', 'error');
+    }
+  } catch(e) {
+    toast('Error deleting account', 'error');
+  }
+}
+</script>
+
+<!-- Delete Confirm Modal -->
+<div id="deleteModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:var(--dark3); border:1px solid rgba(220,38,38,0.3); border-radius:14px; padding:2rem; width:100%; max-width:420px; text-align:center;">
+    <div style="width:56px; height:56px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:50%; display:grid; place-items:center; margin:0 auto 1.25rem; font-size:1.4rem; color:#dc2626;">
+      <i class="fa-solid fa-trash"></i>
+    </div>
+    <div style="font-size:1.1rem; font-weight:700; margin-bottom:0.5rem;">Delete Account?</div>
+    <div style="font-size:0.85rem; color:var(--muted); line-height:1.6; margin-bottom:1.5rem;">
+      This will permanently delete your account, all expenses, and uploaded invoices.
+      <strong style="color:var(--text);">This cannot be undone.</strong>
+    </div>
+    <div style="margin-bottom:1.25rem; text-align:left;">
+      <label style="font-size:0.75rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Type <strong style="color:#fca5a5;">DELETE</strong> to confirm</label>
+      <input type="text" id="deleteConfirmInput" class="form-input" placeholder="DELETE" oninput="checkConfirmInput()" style="border-color:rgba(220,38,38,0.3);">
+    </div>
+    <div style="display:flex; gap:0.75rem;">
+      <button id="confirmDeleteBtn" onclick="deleteAccount()" disabled style="flex:1; padding:0.75rem; background:rgba(220,38,38,0.2); color:#fca5a5; border:1px solid rgba(220,38,38,0.4); border-radius:8px; font-family:'Sora',sans-serif; font-weight:700; font-size:0.9rem; cursor:pointer; transition:all 0.2s;" onmouseover="if(!this.disabled)this.style.background='rgba(220,38,38,0.4)'" onmouseout="this.style.background='rgba(220,38,38,0.2)'">
+        Yes, Delete Forever
+      </button>
+      <button onclick="hideDeleteConfirm()" style="flex:1; padding:0.75rem; background:transparent; color:var(--muted); border:1px solid var(--border); border-radius:8px; font-family:'Sora',sans-serif; font-size:0.9rem; cursor:pointer;">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}

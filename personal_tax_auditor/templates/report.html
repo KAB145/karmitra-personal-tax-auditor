@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Tax Report – KarMitra{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+    <div>
+      <div class="page-title">Annual Tax Report</div>
+      <div class="page-sub">Your full personal tax audit for Nepal</div>
+    </div>
+    <div style="display:flex; gap:0.75rem; align-items:center;">
+      <div class="year-selector">
+        <i class="fa-regular fa-calendar text-amber" style="font-size:0.8rem;"></i>
+        <select id="yearSelect" onchange="loadReport()"></select>
+      </div>
+      <button class="btn-primary" onclick="printReport()">
+        <i class="fa-solid fa-print"></i> Print Report
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="reportContent">
+  <div style="text-align:center; padding:4rem; color:var(--muted);">
+    <div class="spinner" style="margin:0 auto 1rem;"></div>
+    <div>Generating your tax audit…</div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  const sel = document.getElementById('yearSelect');
+  const yr = new Date().getFullYear();
+  for (let y = yr; y >= yr - 4; y--) {
+    const o = document.createElement('option'); o.value = y; o.textContent = y; sel.appendChild(o);
+  }
+})();
+
+function printReport() { window.print(); }
+
+async function loadReport() {
+  const year = document.getElementById('yearSelect').value;
+  const container = document.getElementById('reportContent');
+  container.innerHTML = '<div style="text-align:center;padding:4rem;color:var(--muted);"><div class="spinner" style="margin:0 auto 1rem;"></div><div>Generating…</div></div>';
+
+  try {
+    const d = await api(`/generate-tax-report?year=${year}`);
+    renderReport(d, year);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function renderReport(d, year) {
+  const s = d.summary;
+  const e = d.expenses;
+  const it = d.income_tax;
+  const eff = d.effective;
+
+  document.getElementById('reportContent').innerHTML = `
+    <!-- Header panel -->
+    <div class="panel" style="background:linear-gradient(135deg, var(--dark3), var(--dark2)); border-color:rgba(245,158,11,0.2);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1.5rem;">
+        <div>
+          <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:0.4rem;">Personal Tax Audit Report</div>
+          <div style="font-size:1.4rem; font-weight:700;">${d.user.name}</div>
+          <div style="color:var(--muted); font-size:0.85rem; margin-top:0.25rem;">
+            PAN: ${d.user.pan_number || 'Not provided'} &nbsp;|&nbsp;
+            Employer: ${d.user.employer || 'Not provided'} &nbsp;|&nbsp;
+            FY ${year}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:2.5rem; font-weight:800; font-family:'JetBrains Mono',monospace; color:var(--amber);">${s.effective_rate_pct}%</div>
+          <div style="font-size:0.75rem; color:var(--muted);">Effective Tax Rate</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label"><i class="fa-solid fa-briefcase"></i>Annual Income</div>
+        <div class="kpi-value mono">${fmtNPR(d.annual_salary)}</div>
+        <div class="kpi-sub">Gross salary</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label"><i class="fa-solid fa-file-invoice-dollar"></i>Income Tax</div>
+        <div class="kpi-value mono">${fmtNPR(s.salary_tax)}</div>
+        <div class="kpi-sub">Deducted at source</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-label"><i class="fa-solid fa-percent"></i>VAT Paid</div>
+        <div class="kpi-value mono">${fmtNPR(s.vat_paid)}</div>
+        <div class="kpi-sub">Via daily purchases</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="kpi-label"><i class="fa-solid fa-scale-balanced"></i>Total Tax Burden</div>
+        <div class="kpi-value mono">${fmtNPR(s.total_tax_burden)}</div>
+        <div class="kpi-sub">Income tax + VAT</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <!-- Income Tax Section -->
+      <div class="panel">
+        <div class="panel-title">Income Tax Breakdown <span class="badge-tag">Progressive Slabs</span></div>
+        ${it.slab_details.map(sl => `
+          <div class="slab-row">
+            <div class="slab-label">${sl.label}</div>
+            <div style="font-size:0.7rem; color:var(--muted); margin-right:0.5rem;">on ${fmtNPR(sl.taxable_amount)}</div>
+            <div class="slab-rate">${sl.rate_pct}</div>
+            <div class="slab-tax text-amber">${fmtNPR(sl.tax)}</div>
+          </div>
+        `).join('')}
+        <div style="border-top:1px solid var(--border); padding-top:0.85rem; margin-top:0.85rem; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-weight:600;">Annual Income Tax</span>
+          <span class="mono text-amber" style="font-size:1.1rem; font-weight:700;">${fmtNPR(it.total_income_tax)}</span>
+        </div>
+        <div style="color:var(--muted); font-size:0.75rem; margin-top:0.25rem; text-align:right;">
+          Monthly: ${fmtNPR(it.monthly_income_tax)}
+        </div>
+      </div>
+
+      <!-- VAT Section -->
+      <div class="panel">
+        <div class="panel-title">VAT Paid via Expenses</div>
+        <div style="background:var(--dark2); border-radius:8px; padding:1rem; margin-bottom:1rem;">
+          <div style="display:flex; justify-content:space-between; font-size:0.875rem; margin-bottom:0.5rem;">
+            <span class="text-muted">Total Spent</span>
+            <span class="mono">${fmtNPR(e.total_spent)}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:0.875rem; margin-bottom:0.5rem;">
+            <span class="text-muted">Total Transactions</span>
+            <span class="mono">${e.transaction_count}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:0.875rem; margin-bottom:0.5rem;">
+            <span class="text-muted">Base Price Total</span>
+            <span class="mono">${fmtNPR(e.total_base_price)}</span>
+          </div>
+          <div style="border-top:1px solid var(--border); padding-top:0.5rem; margin-top:0.5rem; display:flex; justify-content:space-between;">
+            <span class="text-muted font-weight:600;">VAT at 13%</span>
+            <span class="mono text-red" style="font-size:1rem; font-weight:700;">${fmtNPR(e.total_vat_paid)}</span>
+          </div>
+        </div>
+
+        <!-- Category breakdown -->
+        <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">By Category</div>
+        ${(d.category_breakdown || []).slice(0, 6).map(cat => `
+          <div style="display:flex; justify-content:space-between; padding:0.4rem 0; border-bottom:1px solid var(--border); font-size:0.82rem;">
+            <span>${cat.category}</span>
+            <span class="mono">${fmtNPR(cat.total)} <span class="text-muted">(VAT: ${fmtNPR(cat.vat)})</span></span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Effective Rate Summary -->
+    <div class="panel">
+      <div class="panel-title">Real Tax Burden Summary</div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1.5rem;">
+        <div style="text-align:center; padding:1.5rem; background:var(--dark2); border-radius:10px; border:1px solid var(--border);">
+          <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Salary Tax Rate</div>
+          <div style="font-size:2rem; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--crimson, #dc2626);">${eff.income_tax_rate}%</div>
+          <div style="font-size:0.75rem; color:var(--muted);">of gross income</div>
+        </div>
+        <div style="text-align:center; padding:1.5rem; background:var(--dark2); border-radius:10px; border:1px solid var(--border);">
+          <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">VAT Rate on Income</div>
+          <div style="font-size:2rem; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--blue);">${eff.vat_rate_on_income}%</div>
+          <div style="font-size:0.75rem; color:var(--muted);">of gross income</div>
+        </div>
+        <div style="text-align:center; padding:1.5rem; background:rgba(245,158,11,0.06); border-radius:10px; border:1px solid rgba(245,158,11,0.2);">
+          <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Combined Effective Rate</div>
+          <div style="font-size:2rem; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--amber);">${eff.effective_rate}%</div>
+          <div style="font-size:0.75rem; color:var(--muted);">of gross income</div>
+        </div>
+      </div>
+      <div style="margin-top:1.25rem; background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.15); border-radius:8px; padding:1rem; font-size:0.82rem; color:var(--muted); line-height:1.6;">
+        <strong style="color:var(--amber);">Note:</strong>
+        ${d.refund_estimation?.note || ''}
+        This report is for personal financial awareness only and does not constitute official tax advice.
+      </div>
+    </div>
+  `;
+}
+
+loadReport();
+</script>
+<style>
+@media print {
+  .sidebar, .mobile-topbar, .page-header button, #yearSelect { display: none !important; }
+  .main-content { margin-left: 0 !important; }
+  .panel { break-inside: avoid; }
+}
+</style>
+{% endblock %}

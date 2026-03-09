@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KarMitra – Nepal Tax Auditor</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --amber: #f59e0b;
+      --amber-dark: #b45309;
+      --crimson: #dc2626;
+      --dark: #0c0e13;
+      --dark2: #161820;
+      --dark3: #1e2029;
+      --border: rgba(255,255,255,0.07);
+      --text: #e8eaf0;
+      --muted: #8b8fa8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--dark); color: var(--text); font-family: 'Sora', sans-serif; overflow-x: hidden; }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 20%, rgba(245,158,11,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(220,38,38,0.05) 0%, transparent 60%);
+    }
+    .hero-grid {
+      position: absolute; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    nav.top-nav {
+      position: relative; z-index: 10;
+      padding: 1.5rem 3rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-brand { display: flex; align-items: center; gap: 0.75rem; }
+    .nav-logo {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--amber), var(--amber-dark));
+      border-radius: 8px;
+      display: grid; place-items: center;
+      font-weight: 800; font-size: 1rem; color: #000;
+    }
+    .nav-title { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; }
+    .nav-title span { color: var(--amber); }
+    .nav-links { display: flex; gap: 1rem; }
+    .btn-nav {
+      padding: 0.5rem 1.25rem;
+      border-radius: 6px; font-family: 'Sora', sans-serif;
+      font-size: 0.875rem; font-weight: 500;
+      cursor: pointer; text-decoration: none; transition: all 0.2s;
+    }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-ghost:hover { border-color: var(--amber); color: var(--amber); }
+    .btn-primary-nav {
+      background: var(--amber); border: 1px solid var(--amber);
+      color: #000; font-weight: 600;
+    }
+    .btn-primary-nav:hover { background: #fbbf24; }
+
+    .hero-body {
+      position: relative; z-index: 5;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 4rem 2rem;
+    }
+    .flag-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.3);
+      padding: 0.35rem 1rem; border-radius: 100px;
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em;
+      color: #fca5a5; margin-bottom: 2rem; text-transform: uppercase;
+    }
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 800; line-height: 1.05;
+      letter-spacing: -0.03em; margin-bottom: 1.5rem;
+    }
+    h1 .accent { color: var(--amber); }
+    .hero-sub {
+      font-size: 1.1rem; color: var(--muted);
+      max-width: 560px; line-height: 1.7; margin-bottom: 2.5rem;
+    }
+    .hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+    .btn-hero-primary {
+      padding: 0.9rem 2rem;
+      background: var(--amber); color: #000;
+      border: none; border-radius: 8px;
+      font-family: 'Sora', sans-serif;
+      font-weight: 700; font-size: 1rem;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.2s; display: inline-flex;
+      align-items: center; gap: 0.5rem;
+    }
+    .btn-hero-primary:hover { background: #fbbf24; transform: translateY(-2px); }
+    .btn-hero-outline {
+      padding: 0.9rem 2rem;
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      font-family: 'Sora', sans-serif;
+      font-weight: 500; font-size: 1rem;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-hero-outline:hover { border-color: var(--amber); color: var(--amber); }
+
+    /* Stats bar */
+    .stats-bar {
+      position: relative; z-index: 5;
+      display: flex; justify-content: center; gap: 3rem;
+      padding: 2rem; flex-wrap: wrap;
+      border-top: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+    .stat-item { text-align: center; }
+    .stat-val { font-size: 1.75rem; font-weight: 700; color: var(--amber); font-family: 'JetBrains Mono', monospace; }
+    .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
+
+    /* Features */
+    .features { padding: 6rem 2rem; }
+    .section-title {
+      text-align: center; margin-bottom: 3rem;
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 700; letter-spacing: -0.02em;
+    }
+    .section-title span { color: var(--amber); }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem; max-width: 1100px; margin: 0 auto;
+    }
+    .feature-card {
+      background: var(--dark2);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.75rem;
+      transition: all 0.3s;
+    }
+    .feature-card:hover { border-color: rgba(245,158,11,0.3); transform: translateY(-4px); }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: 10px;
+      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2);
+      display: grid; place-items: center;
+      font-size: 1.25rem; color: var(--amber); margin-bottom: 1rem;
+    }
+    .feature-title { font-weight: 600; font-size: 1rem; margin-bottom: 0.5rem; }
+    .feature-desc { font-size: 0.875rem; color: var(--muted); line-height: 1.6; }
+
+    /* VAT explainer */
+    .explainer { background: var(--dark2); padding: 5rem 2rem; }
+    .explainer-inner { max-width: 900px; margin: 0 auto; }
+    .formula-box {
+      background: var(--dark3); border: 1px solid var(--border);
+      border-radius: 12px; padding: 2rem;
+      font-family: 'JetBrains Mono', monospace;
+      margin: 2rem 0;
+    }
+    .formula-line { font-size: 0.9rem; color: var(--amber); margin: 0.35rem 0; }
+    .formula-comment { color: var(--muted); }
+
+    /* Footer */
+    footer {
+      text-align: center; padding: 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted); font-size: 0.8rem;
+    }
+    footer a { color: var(--amber); text-decoration: none; }
+  </style>
+</head>
+<body>
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+
+  <nav class="top-nav">
+    <div class="nav-brand">
+      <div class="nav-logo">क</div>
+      <div class="nav-title">Kar<span>Mitra</span></div>
+    </div>
+    <div class="nav-links">
+      <a href="/login" class="btn-nav btn-ghost">Sign In</a>
+      <a href="/register" class="btn-nav btn-primary-nav">Get Started</a>
+    </div>
+  </nav>
+
+  <div class="hero-body">
+    <div class="flag-badge">🇳🇵 Made for Nepal</div>
+    <h1>Understand Your<br><span class="accent">Real Tax Burden</span></h1>
+    <p class="hero-sub">
+      Every purchase you make includes 13% VAT. Your salary is taxed at source.
+      KarMitra reveals how much of your income truly goes to the government.
+    </p>
+    <div class="hero-cta">
+      <a href="/register" class="btn-hero-primary">
+        <i class="fa-solid fa-rocket"></i> Start Free Audit
+      </a>
+      <a href="/login" class="btn-hero-outline">Sign In</a>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-val">13%</div>
+      <div class="stat-label">Nepal VAT Rate</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">~25%</div>
+      <div class="stat-label">Avg Effective Tax</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">NPR</div>
+      <div class="stat-label">Currency</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">Free</div>
+      <div class="stat-label">Forever</div>
+    </div>
+  </div>
+</div>
+
+<section class="features">
+  <div class="section-title">Everything You Need to <span>Audit Your Taxes</span></div>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-receipt"></i></div>
+      <div class="feature-title">Expense Tracking</div>
+      <div class="feature-desc">Log daily purchases with automatic VAT extraction at the standard Nepal rate of 13%.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-camera"></i></div>
+      <div class="feature-title">Invoice OCR</div>
+      <div class="feature-desc">Upload receipt photos or PDFs. Our OCR engine reads vendor name, amount, and VAT automatically.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+      <div class="feature-title">Nepal Tax Engine</div>
+      <div class="feature-desc">Progressive income tax slabs (1%→30%) applied to your salary for precise estimates.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div>
+      <div class="feature-title">Visual Dashboard</div>
+      <div class="feature-desc">Monthly spending charts, VAT trends, and category breakdowns — all in one view.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-file-pdf"></i></div>
+      <div class="feature-title">Tax Report</div>
+      <div class="feature-desc">Generate a full annual tax audit report with income tax, VAT paid, and effective rate.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <div class="feature-title">Secure & Private</div>
+      <div class="feature-desc">PAN numbers are stored securely. All data stays on your account only.</div>
+    </div>
+  </div>
+</section>
+
+<section class="explainer">
+  <div class="explainer-inner">
+    <div class="section-title" style="text-align:left">How <span>VAT</span> Hides in Every Purchase</div>
+    <p style="color:var(--muted); line-height:1.7; margin-bottom:1.5rem;">
+      In Nepal, when you pay NPR 1,000 at a restaurant, you are not just paying for food.
+      A portion of that amount is VAT collected on behalf of the government.
+      KarMitra separates what you actually paid for goods versus what went to taxes.
+    </p>
+    <div class="formula-box">
+      <div class="formula-line"><span class="formula-comment">// VAT is already embedded in the price you pay</span></div>
+      <div class="formula-line">total_paid       = 1,000 NPR</div>
+      <div class="formula-line">vat_amount       = 1,000 × 13 / 113   = <strong>115.04 NPR</strong></div>
+      <div class="formula-line">actual_price     = 1,000 - 115.04     = <strong>884.96 NPR</strong></div>
+      <br>
+      <div class="formula-line"><span class="formula-comment">// On top of that, your salary also has income tax deducted</span></div>
+      <div class="formula-line">salary           = 800,000 NPR/year</div>
+      <div class="formula-line">income_tax       = 5,000 + 20,000 + 20,000 = <strong>45,000 NPR</strong></div>
+      <div class="formula-line">effective_rate   = (45,000 + vat_total) / 800,000</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>KarMitra — Personal Tax Auditor for Nepal &nbsp;|&nbsp;
+    Built with ❤️ for financial transparency &nbsp;|&nbsp;
+    <a href="/register">Get Started Free</a>
+  </p>
+</footer>
+</body>
+</html>
