@@ -10,7 +10,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from flask import Flask, render_template, session, redirect, url_for, send_from_directory
-from models import init_db
+from models import init_db, close_db
 
 # ── App factory ───────────────────────────────────────────────────────────────
 
@@ -28,6 +28,9 @@ def create_app():
     from routes.expenses import expenses_bp
     from routes.invoices import invoices_bp
     from routes.dashboard import dashboard_bp
+
+    # Close DB connection after every request
+    app.teardown_appcontext(close_db)
 
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(expenses_bp, url_prefix="/api")
