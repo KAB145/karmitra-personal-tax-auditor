@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Profile - KarMitra{% endblock %}
+{% block title %}Profile – KarMitra{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -8,35 +8,61 @@
 </div>
 
 <div class="two-col">
-  <!-- Profile form -->
-  <div class="panel">
-    <div class="panel-title">Personal Details</div>
-    <div class="form-group">
-      <label class="form-label">Full Name</label>
-      <input type="text" class="form-input" id="profName">
+  <!-- Left column -->
+  <div>
+    <!-- Personal Details -->
+    <div class="panel">
+      <div class="panel-title">Personal Details</div>
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" class="form-input" id="profName">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="profEmail" disabled style="opacity:0.5;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">PAN Number</label>
+        <input type="text" class="form-input" id="profPAN" placeholder="9-digit PAN" maxlength="9">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Annual Salary (NPR)</label>
+        <input type="number" class="form-input" id="profSalary" placeholder="e.g. 600000" oninput="previewTax()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Employer</label>
+        <input type="text" class="form-input" id="profEmployer" placeholder="Company name">
+      </div>
+      <button class="btn-primary" onclick="saveProfile()">
+        <i class="fa-solid fa-floppy-disk"></i> Save Changes
+      </button>
     </div>
-    <div class="form-group">
-      <label class="form-label">Email</label>
-      <input type="email" class="form-input" id="profEmail" disabled style="opacity:0.5;">
+
+    <!-- Change Password -->
+    <div class="panel">
+      <div class="panel-title">Change Password</div>
+      <div id="pwError" style="display:none; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:6px; padding:0.6rem 0.85rem; font-size:0.82rem; color:#fca5a5; margin-bottom:1rem;"></div>
+      <div id="pwSuccess" style="display:none; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:0.6rem 0.85rem; font-size:0.82rem; color:#6ee7b7; margin-bottom:1rem;"></div>
+      <div class="form-group">
+        <label class="form-label">Current Password</label>
+        <input type="password" class="form-input" id="pwCurrent" placeholder="••••••••">
+      </div>
+      <div class="form-group">
+        <label class="form-label">New Password</label>
+        <input type="password" class="form-input" id="pwNew" placeholder="Min. 6 characters" oninput="checkPwMatch()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm New Password</label>
+        <input type="password" class="form-input" id="pwConfirm" placeholder="Repeat new password" oninput="checkPwMatch()">
+        <div id="pwMatchHint" style="font-size:0.72rem; margin-top:0.35rem; display:none;"></div>
+      </div>
+      <button class="btn-primary" onclick="changePassword()" id="pwBtn">
+        <i class="fa-solid fa-lock"></i> Update Password
+      </button>
     </div>
-    <div class="form-group">
-      <label class="form-label">PAN Number</label>
-      <input type="text" class="form-input" id="profPAN" placeholder="9-digit PAN" maxlength="9">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Annual Salary (NPR)</label>
-      <input type="number" class="form-input" id="profSalary" placeholder="e.g. 600000" oninput="previewTax()">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Employer</label>
-      <input type="text" class="form-input" id="profEmployer" placeholder="Company name">
-    </div>
-    <button class="btn-primary" onclick="saveProfile()">
-      <i class="fa-solid fa-floppy-disk"></i> Save Changes
-    </button>
 
     <!-- Danger Zone -->
-    <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid rgba(220,38,38,0.2);">
+    <div class="panel" style="border-color:rgba(220,38,38,0.2);">
       <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:#dc2626; margin-bottom:0.75rem; font-weight:600;">
         <i class="fa-solid fa-triangle-exclamation"></i> Danger Zone
       </div>
@@ -52,7 +78,7 @@
     </div>
   </div>
 
-  <!-- Tax preview + VAT calc -->
+  <!-- Right column -->
   <div>
     <div class="panel">
       <div class="panel-title">Income Tax Preview</div>
@@ -92,15 +118,21 @@
       This will permanently delete your account, all expenses, and uploaded invoices.
       <strong style="color:var(--text);">This cannot be undone.</strong>
     </div>
-    <div style="margin-bottom:1.25rem; text-align:left;">
-      <label style="font-size:0.75rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Type <strong style="color:#fca5a5;">DELETE</strong> to confirm</label>
-      <input type="text" id="deleteConfirmInput" class="form-input" placeholder="DELETE" oninput="checkConfirmInput()" style="border-color:rgba(220,38,38,0.3);">
+    <div style="margin-bottom:0.75rem; text-align:left;">
+      <label style="font-size:0.75rem; color:var(--muted); display:block; margin-bottom:0.4rem;">
+        Type <strong style="color:#fca5a5;">DELETE</strong> to confirm
+      </label>
+      <input type="text" id="deleteConfirmInput" class="form-input" placeholder="DELETE"
+        oninput="checkConfirmInput()" style="border-color:rgba(220,38,38,0.3);" autocomplete="off">
     </div>
+    <div id="deleteError" style="display:none; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:6px; padding:0.5rem 0.75rem; font-size:0.8rem; color:#fca5a5; margin-bottom:0.75rem; text-align:left;"></div>
     <div style="display:flex; gap:0.75rem;">
-      <button id="confirmDeleteBtn" onclick="deleteAccount()" disabled style="flex:1; padding:0.75rem; background:rgba(220,38,38,0.2); color:#fca5a5; border:1px solid rgba(220,38,38,0.4); border-radius:8px; font-family:'Sora',sans-serif; font-weight:700; font-size:0.9rem; cursor:pointer;" onmouseover="if(!this.disabled)this.style.background='rgba(220,38,38,0.4)'" onmouseout="this.style.background='rgba(220,38,38,0.2)'">
+      <button id="confirmDeleteBtn" onclick="deleteAccount()"
+        style="flex:1; padding:0.75rem; background:rgba(100,100,100,0.2); color:#6b7280; border:1px solid rgba(100,100,100,0.3); border-radius:8px; font-family:'Sora',sans-serif; font-weight:700; font-size:0.9rem; cursor:not-allowed; transition:all 0.2s;">
         Yes, Delete Forever
       </button>
-      <button onclick="hideDeleteConfirm()" style="flex:1; padding:0.75rem; background:transparent; color:var(--muted); border:1px solid var(--border); border-radius:8px; font-family:'Sora',sans-serif; font-size:0.9rem; cursor:pointer;">
+      <button onclick="hideDeleteConfirm()"
+        style="flex:1; padding:0.75rem; background:transparent; color:var(--muted); border:1px solid var(--border); border-radius:8px; font-family:'Sora',sans-serif; font-size:0.9rem; cursor:pointer;">
         Cancel
       </button>
     </div>
@@ -110,13 +142,14 @@
 
 {% block extra_js %}
 <script>
+// ── Profile ───────────────────────────────────────────────────────
 async function loadProfile() {
   try {
     const d = await api('/profile');
-    document.getElementById('profName').value = d.name || '';
-    document.getElementById('profEmail').value = d.email || '';
-    document.getElementById('profPAN').value = d.pan_number || '';
-    document.getElementById('profSalary').value = d.salary || '';
+    document.getElementById('profName').value     = d.name || '';
+    document.getElementById('profEmail').value    = d.email || '';
+    document.getElementById('profPAN').value      = d.pan_number || '';
+    document.getElementById('profSalary').value   = d.salary || '';
     document.getElementById('profEmployer').value = d.employer || '';
     if (d.salary) previewTax();
   } catch(e) { toast(e.message, 'error'); }
@@ -125,19 +158,79 @@ async function loadProfile() {
 async function saveProfile() {
   try {
     await api('/profile', 'PUT', {
-      name: document.getElementById('profName').value,
+      name:       document.getElementById('profName').value,
       pan_number: document.getElementById('profPAN').value,
-      salary: parseFloat(document.getElementById('profSalary').value) || 0,
-      employer: document.getElementById('profEmployer').value,
+      salary:     parseFloat(document.getElementById('profSalary').value) || 0,
+      employer:   document.getElementById('profEmployer').value,
     });
     toast('Profile saved ✓');
   } catch(e) { toast(e.message, 'error'); }
 }
 
+// ── Change Password ───────────────────────────────────────────────
+function checkPwMatch() {
+  const nw  = document.getElementById('pwNew').value;
+  const con = document.getElementById('pwConfirm').value;
+  const hint = document.getElementById('pwMatchHint');
+  if (!con) { hint.style.display = 'none'; return; }
+  hint.style.display = 'block';
+  if (nw === con) {
+    hint.textContent = '✓ Passwords match';
+    hint.style.color = 'var(--green)';
+  } else {
+    hint.textContent = '✗ Passwords do not match';
+    hint.style.color = '#fca5a5';
+  }
+}
+
+async function changePassword() {
+  const errEl  = document.getElementById('pwError');
+  const okEl   = document.getElementById('pwSuccess');
+  const btn    = document.getElementById('pwBtn');
+  errEl.style.display = 'none';
+  okEl.style.display  = 'none';
+
+  const current = document.getElementById('pwCurrent').value;
+  const newPw   = document.getElementById('pwNew').value;
+  const confirm = document.getElementById('pwConfirm').value;
+
+  if (!current || !newPw || !confirm) {
+    errEl.textContent = 'Please fill in all three fields.';
+    errEl.style.display = 'block'; return;
+  }
+  if (newPw !== confirm) {
+    errEl.textContent = 'New passwords do not match.';
+    errEl.style.display = 'block'; return;
+  }
+
+  btn.textContent = 'Updating…'; btn.disabled = true;
+  try {
+    await api('/change-password', 'POST', {
+      current_password: current,
+      new_password:     newPw,
+      confirm_password: confirm,
+    });
+    okEl.textContent = '✓ Password updated successfully!';
+    okEl.style.display = 'block';
+    document.getElementById('pwCurrent').value = '';
+    document.getElementById('pwNew').value     = '';
+    document.getElementById('pwConfirm').value = '';
+    document.getElementById('pwMatchHint').style.display = 'none';
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.innerHTML = '<i class="fa-solid fa-lock"></i> Update Password';
+    btn.disabled = false;
+  }
+}
+
+// ── Tax Preview ───────────────────────────────────────────────────
 async function previewTax() {
   const salary = parseFloat(document.getElementById('profSalary').value) || 0;
   if (!salary) {
-    document.getElementById('taxPreviewPanel').innerHTML = '<div class="empty-state"><i class="fa-solid fa-calculator"></i><p>Enter your salary</p></div>';
+    document.getElementById('taxPreviewPanel').innerHTML =
+      '<div class="empty-state"><i class="fa-solid fa-calculator"></i><p>Enter your salary</p></div>';
     return;
   }
   const slabs = [
@@ -149,13 +242,13 @@ async function previewTax() {
   let tax = 0, rem = salary, details = [];
   for (const s of slabs) {
     if (rem <= 0) break;
-    const size = s.max ? s.max - s.min : rem;
+    const size    = s.max ? s.max - s.min : rem;
     const taxable = Math.min(rem, size);
-    const t = taxable * s.rate;
+    const t       = taxable * s.rate;
     tax += t; rem -= taxable;
     if (taxable > 0) details.push({ ...s, taxable, t });
   }
-  const effRate = salary > 0 ? (tax / salary * 100).toFixed(1) : 0;
+  const effRate = (tax / salary * 100).toFixed(1);
   document.getElementById('taxPreviewPanel').innerHTML = `
     ${details.map(d => `
       <div class="slab-row">
@@ -168,51 +261,91 @@ async function previewTax() {
       <span style="font-weight:600;">Annual Tax</span>
       <span class="mono text-amber" style="font-size:1rem; font-weight:700;">${fmtNPR(tax)}</span>
     </div>
-    <div style="font-size:0.72rem; color:var(--muted); text-align:right;">Monthly: ${fmtNPR(tax/12)} &nbsp;|&nbsp; Rate: ${effRate}%</div>
+    <div style="font-size:0.72rem; color:var(--muted); text-align:right;">
+      Monthly: ${fmtNPR(tax/12)} &nbsp;|&nbsp; Rate: ${effRate}%
+    </div>
   `;
 }
 
+// ── VAT Calculator ────────────────────────────────────────────────
 function calcVAT() {
   const amount = parseFloat(document.getElementById('calcAmount').value) || 0;
-  const res = document.getElementById('calcResult');
+  const res    = document.getElementById('calcResult');
   if (amount > 0) {
     const { vat, base } = extractVAT(amount);
-    document.getElementById('calcVATAmt').textContent = `NPR ${fmt(vat, 2)}`;
+    document.getElementById('calcVATAmt').textContent  = `NPR ${fmt(vat, 2)}`;
     document.getElementById('calcBaseAmt').textContent = `NPR ${fmt(base, 2)}`;
     res.style.display = 'block';
-  } else {
-    res.style.display = 'none';
-  }
+  } else { res.style.display = 'none'; }
 }
 
+// ── Delete Account ────────────────────────────────────────────────
+let deleteReady = false;
+
 function showDeleteConfirm() {
-  document.getElementById('deleteModal').style.display = 'flex';
+  deleteReady = false;
   document.getElementById('deleteConfirmInput').value = '';
-  document.getElementById('confirmDeleteBtn').disabled = true;
+  document.getElementById('deleteError').style.display = 'none';
+  setDeleteBtnState(false);
+  document.getElementById('deleteModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('deleteConfirmInput').focus(), 100);
 }
 
 function hideDeleteConfirm() {
   document.getElementById('deleteModal').style.display = 'none';
 }
 
+function setDeleteBtnState(ready) {
+  const btn = document.getElementById('confirmDeleteBtn');
+  deleteReady = ready;
+  if (ready) {
+    btn.style.background = 'rgba(220,38,38,0.2)';
+    btn.style.color      = '#fca5a5';
+    btn.style.border     = '1px solid rgba(220,38,38,0.4)';
+    btn.style.cursor     = 'pointer';
+  } else {
+    btn.style.background = 'rgba(100,100,100,0.2)';
+    btn.style.color      = '#6b7280';
+    btn.style.border     = '1px solid rgba(100,100,100,0.3)';
+    btn.style.cursor     = 'not-allowed';
+  }
+}
+
 function checkConfirmInput() {
-  const val = document.getElementById('deleteConfirmInput').value;
-  document.getElementById('confirmDeleteBtn').disabled = (val !== 'DELETE');
+  setDeleteBtnState(document.getElementById('deleteConfirmInput').value === 'DELETE');
+  document.getElementById('deleteError').style.display = 'none';
 }
 
 async function deleteAccount() {
+  if (!deleteReady) {
+    const e = document.getElementById('deleteError');
+    e.textContent = 'Please type DELETE in the box above.';
+    e.style.display = 'block'; return;
+  }
+  const btn = document.getElementById('confirmDeleteBtn');
+  btn.textContent = 'Deleting…'; btn.style.cursor = 'not-allowed';
   try {
-    const res = await fetch('/api/delete-account', { method: 'DELETE' });
-    const data = await res.json();
-    if (res.ok) {
-      window.location = '/login';
-    } else {
-      toast(data.error || 'Failed to delete account', 'error');
+    const res = await fetch('/api/delete-account', { method: 'POST', headers: {'Content-Type':'application/json'} });
+    if (res.ok) { window.location.href = '/login'; }
+    else {
+      const d = await res.json();
+      const e = document.getElementById('deleteError');
+      e.textContent = d.error || 'Failed to delete account.';
+      e.style.display = 'block';
+      btn.textContent = 'Yes, Delete Forever';
+      setDeleteBtnState(true);
     }
   } catch(e) {
-    toast('Error deleting account', 'error');
+    document.getElementById('deleteError').textContent = 'Network error. Is the server running?';
+    document.getElementById('deleteError').style.display = 'block';
+    btn.textContent = 'Yes, Delete Forever';
+    setDeleteBtnState(true);
   }
 }
+
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+  if (e.target === this) hideDeleteConfirm();
+});
 
 loadProfile();
 </script>
