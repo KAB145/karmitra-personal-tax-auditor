@@ -79,22 +79,27 @@ async function uploadFile(file) {
 
   try {
     const res = await fetch('/api/upload-invoice', { method: 'POST', body: formData });
-    const data = await res.json();
     clearInterval(interval);
     bar.style.width = '100%';
     setTimeout(() => { document.getElementById('uploadProgress').style.display = 'none'; bar.style.width = '0%'; }, 600);
 
+    let data;
+    try { data = await res.json(); } catch(_) { data = {}; }
+
     if (res.ok) {
-      lastOCR = data.extracted;
+      lastOCR = data.extracted || {};
       lastOCR.invoice_id = data.invoice_id;
-      showOCRResult(data.extracted);
+      showOCRResult(data.extracted || {});
       toast('Invoice uploaded ✓');
       loadInvoices();
-    } else { toast(data.error || 'Upload failed', 'error'); }
+    } else {
+      toast(data.error || 'Upload failed — check console for details.', 'error');
+    }
   } catch(e) {
     clearInterval(interval);
-    toast('Upload error', 'error');
     document.getElementById('uploadProgress').style.display = 'none';
+    toast('Could not reach server. Make sure Flask is running.', 'error');
+    console.error('Upload error:', e);
   }
 }
 
