@@ -19,6 +19,7 @@ def create_app():
     app.secret_key = os.environ.get("SECRET_KEY", "nepal-tax-auditor-dev-key-change-in-prod")
     app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB upload limit
     app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(__file__), "uploads")
+    
 
     # Ensure upload dir exists
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -101,3 +102,5 @@ if __name__ == "__main__":
     app = create_app()
     print("✅  Nepal Personal Tax Auditor running on http://localhost:5000")
     app.run(debug=True, port=5000)
+
+
